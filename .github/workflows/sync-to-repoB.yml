@@ -1,0 +1,47 @@
+name: Sync Files to Repo B
+
+on:
+  push:
+    branches:
+      - main  # Runs when changes are pushed to Repo A's main branch
+  workflow_dispatch:  # Allows manual trigger from Actions tab
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo A
+        uses: actions/checkout@v3
+
+      - name: Clone Repo B Using Token
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          echo "Cloning Repo B with authentication..."
+          git clone https://$GH_PAT@github.com/singhrakeshy/Repo-B.git
+          cd Repo-B
+          git config user.name "singhrakeshy"
+          git config user.email "singhrakeshy1562@gmail.com"
+          echo "Repo B cloned successfully!"
+
+      - name: Copy All Files to Repo B
+        run: |
+          echo "Copying files from Repo A to Repo B..."
+          rsync -av --exclude='.git' . Repo-B/ || echo "Rsync failed!"
+          cd Repo-B
+          git status
+          echo "Files copied!"
+
+      - name: Commit and Push Changes
+        run: |
+          cd Repo-B
+          git add .
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            echo "Committing changes..."
+            git commit -m "Sync changes from Repo A"
+            git push origin main || echo "Push failed!"
+          fi
+
